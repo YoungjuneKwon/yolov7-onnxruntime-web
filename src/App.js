@@ -7,7 +7,6 @@ import "./style/App.css";
 const App = () => {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState("Loading OpenCV.js...");
-  const [image, setImage] = useState(null);
   const [fps, setFps] = useState(0);
   const imageRef = useRef(null);
   const canvasRef = useRef(null);
@@ -21,22 +20,16 @@ const App = () => {
 
   const extractFrame = (video) => {
     if (lastTime !== 0) {
-      const fps = 1000 / (Date.now() - lastTime);
-      setFps(fps);
+      setFps(1000 / (Date.now() - lastTime));
     }
     lastTime = Date.now();
     const { videoWidth, videoHeight } = video;
     const canvas = document.createElement("canvas");
     canvas.width = videoWidth;
     canvas.height = videoHeight;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0);
-    const dataUri = canvas.toDataURL("image/jpeg");
-    imageRef.current.src = dataUri; // set image source
-    setImage(dataUri);
-    requestAnimationFrame(() => {
-      extractFrame(video);
-    });
+    canvas.getContext("2d").drawImage(video, 0, 0);
+    imageRef.current.src = canvas.toDataURL("image/jpeg");
+    requestAnimationFrame(() => extractFrame(video));
   };
   cv["onRuntimeInitialized"] = async () => {
     // create session
@@ -53,10 +46,11 @@ const App = () => {
     await yolov7.run({ images: tensor });
 
     setSession(yolov7);
-    setLoading(false);
 
     const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true});
     videoRef.current.srcObject = mediaStream;
+
+    setLoading(false);
   };
 
   return (
@@ -66,9 +60,6 @@ const App = () => {
       <div className="content">
         <img
           ref={imageRef}
-          src="#"
-          alt=""
-          style={{ display: image ? "block" : "none" }}
           onLoad={() => {
             detectImage(
               imageRef.current,
@@ -80,7 +71,6 @@ const App = () => {
           }}
         />
         <canvas
-          id="canvas"
           width={modelInputShape[2]}
           height={modelInputShape[3]}
           ref={canvasRef}
