@@ -59,6 +59,7 @@ const App = () => {
       {fps && <div className="fps">{fps.toFixed(2)} FPS</div>}
       <div className="content">
         <img
+          alt=""
           ref={imageRef}
           onLoad={() => {
             detectImage(
