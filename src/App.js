@@ -8,46 +8,60 @@ const App = () => {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState("Loading OpenCV.js...");
   const [image, setImage] = useState(null);
-  const inputImage = useRef(null);
+  const [stream, setStream] = useState(null);
   const imageRef = useRef(null);
   const canvasRef = useRef(null);
+  const videoRef = useRef(null);
 
   // configs
   const modelName = "yolov7-tiny.onnx";
   const modelInputShape = [1, 3, 640, 640];
   const classThreshold = 0.2;
 
+  const extractFrame = (video) => {
+    const { videoWidth, videoHeight } = video;
+    const canvas = document.createElement("canvas");
+    canvas.width = videoWidth;
+    canvas.height = videoHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0);
+    const dataUri = canvas.toDataURL("image/jpeg");
+    imageRef.current.src = dataUri; // set image source
+    setImage(dataUri);
+    requestAnimationFrame(() => {
+      extractFrame(video);
+    });
+  };
   cv["onRuntimeInitialized"] = async () => {
     // create session
-    setLoading("Loading YOLOv7 model...");
-    const yolov7 = await InferenceSession.create(`${process.env.PUBLIC_URL}/model/${modelName}`);
+    const modelUri = `${process.env.PUBLIC_URL}/model/${modelName}`;
+    setLoading(`Loading YOLOv7 model... ${modelUri}`);
+    try {
+      const yolov7 = await InferenceSession.create(modelUri);
+      // warmup model
+      setLoading("Warming up model...");
+      const tensor = new Tensor(
+        "float32",
+        new Float32Array(modelInputShape.reduce((a, b) => a * b)),
+        modelInputShape
+      );
+      await yolov7.run({ images: tensor });
 
-    // warmup model
-    setLoading("Warming up model...");
-    const tensor = new Tensor(
-      "float32",
-      new Float32Array(modelInputShape.reduce((a, b) => a * b)),
-      modelInputShape
-    );
-    await yolov7.run({ images: tensor });
+      setSession(yolov7);
+      setLoading(false);
 
-    setSession(yolov7);
-    setLoading(false);
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true});
+      await setStream(mediaStream);
+      videoRef.current.srcObject = mediaStream;
+    } catch (e) {
+      alert(e);
+    }
+
   };
 
   return (
     <div className="App">
       {loading && <Loader>{loading}</Loader>}
-      <div className="header">
-        <h1>YOLOv7 Object Detection App</h1>
-        <p>
-          YOLOv7 object detection application live on browser powered by{" "}
-          <code>onnxruntime-web</code>
-        </p>
-        <p>
-          Serving : <code className="code">{modelName}</code>
-        </p>
-      </div>
       <div className="content">
         <img
           ref={imageRef}
@@ -72,45 +86,15 @@ const App = () => {
         />
       </div>
 
-      <input
-        type="file"
-        ref={inputImage}
-        accept="image/*"
-        style={{ display: "none" }}
-        onChange={(e) => {
-          // handle next image to detect
-          if (image) {
-            URL.revokeObjectURL(image);
-            setImage(null);
-          }
-
-          const url = URL.createObjectURL(e.target.files[0]); // create image url
-          imageRef.current.src = url; // set image source
-          setImage(url);
-        }}
+      <video
+        ref={videoRef}
+        style={{ display: "none"}}
+        autoPlay
+        onLoadedMetadata={() => {
+          extractFrame(videoRef.current);
+        }
+        }
       />
-      <div className="btn-container">
-        <button
-          onClick={() => {
-            inputImage.current.click();
-          }}
-        >
-          Open local image
-        </button>
-        {image && (
-          /* show close btn when there is image */
-          <button
-            onClick={() => {
-              inputImage.current.value = "";
-              imageRef.current.src = "#";
-              URL.revokeObjectURL(image);
-              setImage(null);
-            }}
-          >
-            Close image
-          </button>
-        )}
-      </div>
     </div>
   );
 };
