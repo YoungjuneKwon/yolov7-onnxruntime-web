@@ -56,7 +56,7 @@ const App = () => {
   return (
     <div className="App">
       {loading && <Loader>{loading}</Loader>}
-      {fps && <div className="fps">{fps.toFixed(2)} FPS</div>}
+      {fps !== 0 && <div className="fps">{fps.toFixed(2)} FPS</div>}
       <div className="content">
         <img
           alt=""
