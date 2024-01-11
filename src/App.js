@@ -47,7 +47,7 @@ const App = () => {
 
     setSession(yolov7);
 
-    const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true});
+    const mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }});
     videoRef.current.srcObject = mediaStream;
 
     setLoading(false);
@@ -56,7 +56,6 @@ const App = () => {
   return (
     <div className="App">
       {loading && <Loader>{loading}</Loader>}
-      {fps !== 0 && <div className="fps">{fps.toFixed(2)} FPS</div>}
       <div className="content">
         <img
           alt=""
@@ -71,22 +70,22 @@ const App = () => {
             );
           }}
         />
+        <video
+          ref={videoRef}
+          style={{ display: "none"}}
+          autoPlay
+          onLoadedMetadata={() => {
+            extractFrame(videoRef.current);
+          }
+          }
+        />
         <canvas
           width={modelInputShape[2]}
           height={modelInputShape[3]}
           ref={canvasRef}
         />
       </div>
-
-      <video
-        ref={videoRef}
-        style={{ display: "none"}}
-        autoPlay
-        onLoadedMetadata={() => {
-          extractFrame(videoRef.current);
-        }
-        }
-      />
+      {fps !== 0 && <div className="fps">{fps.toFixed(2)} FPS</div>}
     </div>
   );
 };
