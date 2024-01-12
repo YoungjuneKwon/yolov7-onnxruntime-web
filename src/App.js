@@ -29,6 +29,16 @@ const App = () => {
     canvas.height = videoHeight;
     canvas.getContext("2d").drawImage(video, 0, 0);
     imageRef.current.src = canvas.toDataURL("image/jpeg");
+  };
+
+  const onImageLoaded = async (image, canvas, video) => {
+    await detectImage(
+      image,
+      canvas,
+      session,
+      classThreshold,
+      modelInputShape
+    );
     requestAnimationFrame(() => extractFrame(video));
   };
   cv["onRuntimeInitialized"] = async () => {
@@ -60,24 +70,7 @@ const App = () => {
         <img
           alt=""
           ref={imageRef}
-          onLoad={() => {
-            detectImage(
-              imageRef.current,
-              canvasRef.current,
-              session,
-              classThreshold,
-              modelInputShape
-            );
-          }}
-        />
-        <video
-          ref={videoRef}
-          style={{ display: "none"}}
-          autoPlay
-          onLoadedMetadata={() => {
-            extractFrame(videoRef.current);
-          }
-          }
+          onLoad={() => onImageLoaded(imageRef.current, canvasRef.current, videoRef.current)}
         />
         <canvas
           width={modelInputShape[2]}
@@ -86,6 +79,14 @@ const App = () => {
         />
       </div>
       {fps !== 0 && <div className="fps">{fps.toFixed(2)} FPS</div>}
+      <video
+          ref={videoRef}
+          style={{ display: "none"}}
+          autoPlay
+          playsInline
+          muted
+          onLoadedMetadata={() => extractFrame(videoRef.current)}
+        />
     </div>
   );
 };
